@@ -28,11 +28,11 @@ go get github.com/cupid-mapping/cupid-go
 
 ## Usage
 
-### Import
+#### Import
 ```golang
 import cupid "github.com/cupid-mapping/cupid-go"
 import cupidModels "github.com/cupid-mapping/cupid-go/models"
-````
+```
 
 #### Create client
 ```golang
