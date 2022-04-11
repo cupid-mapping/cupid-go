@@ -1,0 +1,626 @@
+openapi: 3.0.1
+info:
+  title: Cupid API
+  description: "Performing mapping through the Cupid API is very straightforward.\
+    \ You'll first upload your properties inventory to be used as reference and then\
+    \ send a list of properties to be mapped to the API and get the results directly\
+    \ in the response.\n\n#### Getting started is easy:\n\n<!--\ntype: tab\ntitle:\
+    \ 1. Sign-up\n-->\n\n1. Head to [cupid website](http://mapping.nuitee.com:8084),\
+    \ enter your details to sign up.\n2. In your dashboard, click on \"API Keys\"\
+    \ in the menu and generate your first API key.\n3. You'll need to add this key\
+    \ as a ```x-api-key``` request header to each request.\n4. Now use the tabs above\
+    \ to navigate to the second step and \"2. Setup your workspace\".\n\n<!--\ntype:\
+    \ tab\ntitle: 2. Setup your workspace\n-->\n\nUpload a CSV file with your properties\
+    \ inventory using the [upload catalog endpoint](https://nuitee2.stoplight.io/docs/cupid/b3A6NDg1OTM1MTE-upload-inventory).\n\
+    \n<!--\ntype: tab\ntitle: 3. Start mapping\n-->\n\nAfter you have uploaded your\
+    \ inventory, you can send a list of properties using the [mapping endpoint](https://nuitee2.stoplight.io/docs/cupid/b3A6NDUxMTM0NTA-map-hotel-list)\
+    \ and get their mapping result instantly.\n\n<!-- type: tab-end -->"
+  contact:
+    name: Cupid API
+    url: https://cupid.travel/support
+    email: hello@cupid.travel
+  version: "1.0"
+servers:
+- url: http://34.219.111.155:8080/api
+- url: https://34.219.111.155:8080/api
+tags:
+- name: Hotels
+- name: Catalogs
+- name: Partners
+- name: Partner Catalogs
+paths:
+  /inventories:
+    get:
+      summary: List inventories
+      description: This endpoint can be used to list the inventories uploaded to your
+        workspace.<br>You can check their status and other basic info.
+      operationId: list-inventories
+      responses:
+        "200":
+          description: Returns a list of user inventories.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200'
+        "401":
+          description: Your request was sent without or with an incorrect API key.
+            This most frequently happens when the x-api-key header wasn't added or
+            contains an incorrect value.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResult'
+      security:
+      - ApiKeyAuth: []
+  /inventories/{inventory_id}:
+    get:
+      summary: Inventory details
+      description: "This endpoint can be used to check the requested inventory's details.\n\
+        \nYou can use it to get the inventory status ```mapping_process_status_id```\
+        \ as outlined below. The status has to be 2 (Done) to start mapping.\n\n**Possible\
+        \ values for the inventory's status ```mapping_process_status_id```:**\n\n\
+        | value     | Name           | Description                               \
+        \         | Action                                                     |\n\
+        | --------- | -------------- | --------------------------------------------------\
+        \ | ---------------------------------------------------------- |\n| -1   \
+        \     | **Invalid**    | The inventory doesn't contain any valid hotels  \
+        \     | Correct your catalog and try again.                        |\n| 0\
+        \         | **Pending**    | The inventory is being uploaded             \
+        \         | Wait, no action required.                                  |\n\
+        | 1         | **Processing** | The inventory is being processed          \
+        \           | Wait, no action required.                                  |\n\
+        | 2         | **Done**       | The process is complete                   \
+        \         | **You can start mapping.**                                 |\n\
+        | 3         | **Failed**     | There was an error while processing       \
+        \         | Retry and if the error persists, feel free to contact us.  |\n\
+        \nWhen you have an inventory with ```active=true``` and ```mapping_process_status_id=2```\
+        \ you can use the following endpoint to perfom mapping:\n\n- [Map a list of\
+        \ properties](https://nuitee2.stoplight.io/docs/cupid/b3A6NDUxMTM0NTA-map-hotel-list)\n\
+        <!-- - [Map a CSV file](https://nuitee2.stoplight.io/docs/cupid/b3A6NDQ3ODY2OTY-upload-user-catalog)-->"
+      operationId: inventory-details
+      parameters:
+      - name: inventory_id
+        in: path
+        description: Inventory ID
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: integer
+      responses:
+        "200":
+          description: Returns the details of the requested inventory.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_1'
+        "401":
+          description: Your request was sent without or with an incorrect API key.
+            This most frequently happens when the x-api-key header wasn't added or
+            contains an incorrect value.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResult'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundResult'
+        "500":
+          description: An internal server error within the Cupid platform has occurred.
+            Our team will investigate the error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerErrorResult'
+      security:
+      - ApiKeyAuth: []
+  /inventories/upload:
+    post:
+      summary: Upload inventory
+      description: "This end point can be used to upload an inventory with a provided\
+        \ CSV file.<br> <br>\nYou will have to provide the inventory's name and for\
+        \ each column in your file, you'll need match its index with the standard\
+        \ field names provided below.<br>\n\nLet's assume you have a CSV file that\
+        \ looks like the following table:\n\n| HotelID     | Hotel_Name   | Hotel_Address\
+        \ | Hotel_Lat  | Hotel_Lon  | Country | City     | ... |\n| ----------- |\
+        \ ------------ | ------------- | ---------- | ---------- | ------- | --------\
+        \ | --- |\n| 1408        | Smile Hotel  | 123 main st   | 5.419514   | 3.392694\
+        \   | AU      | Adelaid  | ... |\n| 123         | Cupid resort | 456 north\
+        \ av  | 55.69254   | 37.3167887 | MA      | Zagoura  | ... |\n\nIn this case\
+        \ the form data would be:\n- **file**: The csv file to be uploaded\n- **name**:\
+        \ Cupid inventory\n- **header_id**: 0\n- **header_name**: 1\n- **header_address**:\
+        \ 2\n- **header_city**: 6\n- **header_country_code**: 5\n- **header_latitude**:\
+        \ 3\n- **header_longitude**: 4\n\n<!-- theme: warning -->\n> #### Watch Out!\n\
+        >\n> When uploading your inventory it's important to make sure the process\
+        \ is complete before trying to start mapping.\n> Depending on the size of\
+        \ your file, this can take several minutes.<br><br>\n> You can use the [inventory\
+        \ details endpoint](https://nuitee2.stoplight.io/docs/cupid/b3A6NDg1OTM1MTA-inventory-details)\
+        \ to check the processing status.\n> If the inventory is still processing,\
+        \ the mapping endpoints will respond with an error 404.\n\nWhen you have an\
+        \ inventory with ```active=true``` and ```mapping_process_status_id=2``` you\
+        \ can use the following endpoint to perfom mapping:\n\n- [Map a list of properties](https://nuitee2.stoplight.io/docs/cupid/b3A6NDUxMTM0NTA-map-hotel-list)\n\
+        <!-- - [Map a CSV file](https://nuitee2.stoplight.io/docs/cupid/b3A6NDQ3ODY2OTY-upload-user-catalog)\
+        \ -->"
+      operationId: upload-inventory
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/inventories_upload_body'
+        required: true
+      responses:
+        "200":
+          description: Returns the Id of the uploaded inventory.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadInventoryResponse'
+        "400":
+          description: "Your request wasn't formatted correctly and therefore couldn't\
+            \ be processed. This most frequently happens when query parameters or\
+            \ request body values are missing, incorrectly formatted or added where\
+            \ they don't exist (e.g. due to typos)."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestResult'
+        "401":
+          description: Your request was sent without or with an incorrect API key.
+            This most frequently happens when the x-api-key header wasn't added or
+            contains an incorrect value.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResult'
+        "500":
+          description: An internal server error within the Cupid platform has occurred.
+            Our team will investigate the error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerErrorResult'
+      security:
+      - ApiKeyAuth: []
+  /map-hotels:
+    post:
+      summary: Map hotel list
+      description: "<!-- theme: warning -->\n> #### Requirement\n>\n> Active inventory\
+        \ with ```mapping_process_status_id=2```, you can check this using the [inventory\
+        \ details endpoint](https://nuitee2.stoplight.io/docs/cupid/b3A6NDg1OTM1MTA-inventory-details).\n\
+        \nThis endpoint allows you to send a list of properties and maps it against\
+        \ your active inventory. You will get the resulting mappings in the response.\n\
+        \n### Limit\nYou can send up to 1000 properties per request."
+      operationId: map-hotels
+      parameters:
+      - name: extended_info
+        in: query
+        description: "If true, returns properties info along with the mapped IDs.<br>\
+          \ Otherwise, returns only the user properties IDs along with the mapped\
+          \ partner IDs."
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: boolean
+          default: false
+      requestBody:
+        description: List of hotels to map
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/HotelItem'
+        required: false
+      responses:
+        "200":
+          description: Returns a list with the mapped properties.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapHotelsResponse'
+        "400":
+          description: "Your request wasn't formatted correctly and therefore couldn't\
+            \ be processed. This most frequently happens when query parameters or\
+            \ request body values are missing, incorrectly formatted or added where\
+            \ they don't exist (e.g. due to typos)."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestResult'
+        "401":
+          description: Your request was sent without or with an incorrect API key.
+            This most frequently happens when the x-api-key header wasn't added or
+            contains an incorrect value.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedErrorResult'
+        "404":
+          description: "Inventory not found, you need to upload an inventory."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundResult'
+        "409":
+          description: "Your inventory is still being processed, try again later.\
+            \ You can check its status using the catalog details endpoint."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictResult'
+        "500":
+          description: An internal server error within the Cupid platform has occurred.
+            Our team will investigate the error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerErrorResult'
+      security:
+      - ApiKeyAuth: []
+      x-codegen-request-body-name: hotels
+components:
+  schemas:
+    BadRequestResult:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: "Error code for you to use programatically, for error logging\
+            \ and debugging."
+          example: 400
+        msg:
+          type: string
+          description: Error message intended to aid developers in debugging issues.
+          example: Bad request
+    ConflictResult:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: "Error code for you to use programatically, for error logging\
+            \ and debugging."
+          example: 409
+        msg:
+          type: string
+          description: Error message intended to aid developers in debugging issues.
+          example: Conflict
+    HotelItem:
+      required:
+      - address
+      - country_code
+      - hotel_code
+      - name
+      type: object
+      properties:
+        address:
+          type: string
+          example: 123 main street
+        country_code:
+          type: string
+          example: US
+        hotel_code:
+          type: string
+          example: "1256"
+        latitude:
+          type: number
+          example: 36.18743350322336
+        longitude:
+          type: number
+          example: -115.15064193665704
+        name:
+          type: string
+          example: hotel name
+    InvalidHotel:
+      type: object
+      properties:
+        id:
+          type: string
+        reason:
+          type: array
+          items:
+            type: string
+      example:
+        reason:
+        - reason
+        - reason
+        id: id
+    Inventory:
+      type: object
+      properties:
+        active:
+          type: boolean
+          description: "If true, this is the inventory used as a reference when mapping"
+          example: true
+        created_at:
+          type: string
+          format: date-time
+        id:
+          type: integer
+          description: Inventory ID
+          example: 2
+        invalid_hotels:
+          type: integer
+          example: 1000
+        mapping_process_status_id:
+          type: integer
+          description: |-
+            Process status:
+            * -1 - INACTIVE.
+            * 0 - PENDING.
+            * 1 - PROCESSING.
+            * 2 - DONE.
+            * 3 - FAILED.
+          example: 2
+        name:
+          type: string
+          example: Cupid Catalog
+        total_hotels:
+          type: integer
+          example: 20000
+        updated_at:
+          type: string
+          format: date-time
+        valid_hotels:
+          type: integer
+          example: 19000
+      example:
+        updated_at: 2000-01-23T04:56:07.000+00:00
+        valid_hotels: 19000
+        name: Cupid Catalog
+        active: true
+        created_at: 2000-01-23T04:56:07.000+00:00
+        id: 2
+        invalid_hotels: 1000
+        total_hotels: 20000
+        mapping_process_status_id: 2
+    MapHotelsResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MappedHotelItem'
+        invalid_hotels:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvalidHotel'
+      example:
+        code: 200
+        data:
+        - mapped_hotel_id: "3456"
+          country: US
+          address: 123 main street
+          city: Las Vegas
+          latitude: "36.18743350322336"
+          name: Hotel name
+          id: 123
+          longitude: "-115.15064193665704"
+        - mapped_hotel_id: "3456"
+          country: US
+          address: 123 main street
+          city: Las Vegas
+          latitude: "36.18743350322336"
+          name: Hotel name
+          id: 123
+          longitude: "-115.15064193665704"
+        invalid_hotels:
+        - reason:
+          - reason
+          - reason
+          id: id
+        - reason:
+          - reason
+          - reason
+          id: id
+    MappedHotelItem:
+      type: object
+      properties:
+        address:
+          type: string
+          example: 123 main street
+        city:
+          type: string
+          example: Las Vegas
+        country:
+          type: string
+          example: US
+        id:
+          type: integer
+          description: The ID from your inventory
+          example: 123
+        latitude:
+          type: string
+          example: "36.18743350322336"
+        longitude:
+          type: string
+          example: "-115.15064193665704"
+        mapped_hotel_id:
+          type: string
+          description: The ID from the partner catalog
+          example: "3456"
+        name:
+          type: string
+          example: Hotel name
+      example:
+        mapped_hotel_id: "3456"
+        country: US
+        address: 123 main street
+        city: Las Vegas
+        latitude: "36.18743350322336"
+        name: Hotel name
+        id: 123
+        longitude: "-115.15064193665704"
+    NotFoundResult:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: "Error code for you to use programatically, for error logging\
+            \ and debugging."
+          example: 404
+        msg:
+          type: string
+          description: Error message intended to aid developers in debugging issues.
+          example: Resource not found
+    Result:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        data:
+          type: object
+      example:
+        code: 200
+        data: {}
+    ServerErrorResult:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: "Error code for you to use programatically, for error logging\
+            \ and debugging."
+          example: 500
+        msg:
+          type: string
+          description: Error message intended to aid developers in debugging issues.
+          example: Internal server error
+    UnauthorizedErrorResult:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: "Error code for you to use programatically, for error logging\
+            \ and debugging."
+          example: 401
+        msg:
+          type: string
+          description: Error message intended to aid developers in debugging issues.
+          example: Unauthorized
+    UploadInventoryResponse:
+      type: object
+      properties:
+        catalog_id:
+          type: integer
+          example: 91
+        code:
+          type: integer
+          example: 200
+      example:
+        catalog_id: 91
+        code: 200
+    inline_response_200:
+      type: object
+      properties:
+        Result:
+          $ref: '#/components/schemas/Result'
+        code:
+          type: integer
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Inventory'
+      example:
+        code: 0
+        data:
+        - updated_at: 2000-01-23T04:56:07.000+00:00
+          valid_hotels: 19000
+          name: Cupid Catalog
+          active: true
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: 2
+          invalid_hotels: 1000
+          total_hotels: 20000
+          mapping_process_status_id: 2
+        - updated_at: 2000-01-23T04:56:07.000+00:00
+          valid_hotels: 19000
+          name: Cupid Catalog
+          active: true
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: 2
+          invalid_hotels: 1000
+          total_hotels: 20000
+          mapping_process_status_id: 2
+        Result:
+          code: 200
+          data: {}
+    inline_response_200_1:
+      type: object
+      properties:
+        Result:
+          $ref: '#/components/schemas/Result'
+        code:
+          type: integer
+        data:
+          $ref: '#/components/schemas/Inventory'
+      example:
+        code: 0
+        data:
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          valid_hotels: 19000
+          name: Cupid Catalog
+          active: true
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: 2
+          invalid_hotels: 1000
+          total_hotels: 20000
+          mapping_process_status_id: 2
+        Result:
+          code: 200
+          data: {}
+    inventories_upload_body:
+      required:
+      - file
+      - header_address
+      - header_country_code
+      - header_id
+      - header_name
+      - name
+      properties:
+        file:
+          type: string
+          description: CSV File to be uploaded
+          format: binary
+        name:
+          type: string
+          description: Inventory name
+        header_id:
+          type: integer
+          description: Column index for hotel ID
+          format: int32
+        header_name:
+          type: integer
+          description: Column index for hotel name
+          format: int32
+        header_address:
+          type: integer
+          description: Column index for hotel address
+          format: int32
+        header_city:
+          type: integer
+          description: Column index for hotel city
+          format: int32
+        header_country_code:
+          type: integer
+          description: Column index for hotel country code
+          format: int32
+        header_latitude:
+          type: integer
+          description: Column index for hotel latitude
+          format: int32
+        header_longitude:
+          type: integer
+          description: Column index for hotel longitude
+          format: int32
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      name: x-api-key
+      in: header
